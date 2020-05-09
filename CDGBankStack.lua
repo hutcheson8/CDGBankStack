@@ -5,6 +5,7 @@ CDGBS.NameSpaced = "CDG Bank Stacker"
 CDGBS.Author = "|cFFA500CrazyDutchGuy|r"
 CDGBS.Version = "1.14"
 CDGBS.defaults = {
+	enabled = true,
 	logToDefaultChat = true,
 	logToCDGShowLoot = true,
 	ignoreSavedItems = true,
@@ -44,32 +45,34 @@ function CDGBS:IsItemProtected(bagId, slotId)
 end
 
 function CDGBS:EVENT_OPEN_BANK(...)
-	local bankCache = SHARED_INVENTORY:GetOrCreateBagCache(BAG_BANK)
-	local bagCache  = SHARED_INVENTORY:GetOrCreateBagCache(BAG_BACKPACK)
+	if CDGBS.SV.enabled then
+		local bankCache = SHARED_INVENTORY:GetOrCreateBagCache(BAG_BANK)
+		local bagCache  = SHARED_INVENTORY:GetOrCreateBagCache(BAG_BACKPACK)
 
-	for bankSlot, bankSlotData in pairs(bankCache) do
-		if not (bankSlotData.itemType == ITEMTYPE_FOOD or bankSlotData.itemType == ITEMTYPE_DRINK or bankSlotData.itemType == ITEMTYPE_POTION or bankSlotData.itemType == ITEMTYPE_SOUL_GEM or bankSlotData.itemType == ITEMTYPE_TOOL) then
-			local bankStack, bankMaxStack = GetSlotStackSize(BAG_BANK, bankSlot)
+		for bankSlot, bankSlotData in pairs(bankCache) do
+			if not (bankSlotData.itemType == ITEMTYPE_FOOD or bankSlotData.itemType == ITEMTYPE_DRINK or bankSlotData.itemType == ITEMTYPE_POTION or bankSlotData.itemType == ITEMTYPE_SOUL_GEM or bankSlotData.itemType == ITEMTYPE_TOOL) then
+				local bankStack, bankMaxStack = GetSlotStackSize(BAG_BANK, bankSlot)
 
-			if bankStack > 0 and bankStack < bankMaxStack then
-				for bagSlot, bagSlotData in pairs(bagCache) do
-					if not bagSlotData.stolen and bankSlotData.rawName == bagSlotData.rawName and (not self.SV.ignoreSavedItems or (self.SV.ignoreSavedItems and not self:IsItemProtected(BAG_BACKPACK, bagSlot))) then
-						local bagStack, bagMaxStack = GetSlotStackSize(BAG_BACKPACK, bagSlot)
-						local bagItemLink = GetItemLink(BAG_BACKPACK, bagSlot, LINK_STYLE_DEFAULT)
-						local quantity = zo_min(bagStack, bankMaxStack - bankStack) 
+				if bankStack > 0 and bankStack < bankMaxStack then
+					for bagSlot, bagSlotData in pairs(bagCache) do
+						if not bagSlotData.stolen and bankSlotData.rawName == bagSlotData.rawName and (not self.SV.ignoreSavedItems or (self.SV.ignoreSavedItems and not self:IsItemProtected(BAG_BACKPACK, bagSlot))) then
+							local bagStack, bagMaxStack = GetSlotStackSize(BAG_BACKPACK, bagSlot)
+							local bagItemLink = GetItemLink(BAG_BACKPACK, bagSlot, LINK_STYLE_DEFAULT)
+							local quantity = zo_min(bagStack, bankMaxStack - bankStack) 
 
-						if IsProtectedFunction("RequestMoveItem") then
-							CallSecureProtected("RequestMoveItem", BAG_BACKPACK, bagSlot, BAG_BANK, bankSlot, quantity)
-						else
-							RequestMoveItem(BAG_BACKPACK, bagSlot, BAG_BANK, bankSlot, quantity)
-						end
+							if IsProtectedFunction("RequestMoveItem") then
+								CallSecureProtected("RequestMoveItem", BAG_BACKPACK, bagSlot, BAG_BANK, bankSlot, quantity)
+							else
+								RequestMoveItem(BAG_BACKPACK, bagSlot, BAG_BANK, bankSlot, quantity)
+							end
 
-						self:LogActionToChat(zo_strformat("Banked [<<1>>/<<2>>] <<t:3>>", quantity, bagStack, bagItemLink))
+							self:LogActionToChat(zo_strformat("Banked [<<1>>/<<2>>] <<t:3>>", quantity, bagStack, bagItemLink))
 
-						bankStack = bankStack + quantity
+							bankStack = bankStack + quantity
 
-						if bankStack == bankMaxStack then
-							break
+							if bankStack == bankMaxStack then
+								break
+							end
 						end
 					end
 				end
@@ -89,6 +92,13 @@ function CDGBS:CreateLAM2Panel()
 	}
 
 	local optionsData = {
+		{
+			type = "checkbox",
+			name = "Enabled",
+			tooltip = "Enabled",
+			getFunc = function() return self.SV.enabled end,
+			setFunc = function(value) self.SV.enabled = value end,
+		},
 		{
 			type = "checkbox",
 			name = "Log to default chat",
